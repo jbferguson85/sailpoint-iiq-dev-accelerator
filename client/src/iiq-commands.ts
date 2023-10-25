@@ -10,6 +10,7 @@ import {URL} from 'url';
 import * as path from 'path';
 
 var xpath = require('xpath')
+import * as xpath_ts from 'xpath-ts'
 import {DOMParser, XMLSerializer} from '@xmldom/xmldom'
 import {API as GitAPI, Repository, GitExtension, Status} from './typings/git';
 import {PathProposer} from './pathProposer';
@@ -1462,23 +1463,32 @@ export class IIQCommands {
     return xml;
   }
 
-  private async tokenizeWithRerverseTokens(xml){
+  private async tokenizeWithRerverseTokens(xml: string): Promise<string> {
     const reverseTokens = await this.loadReverseTokens();
     const props = await this.loadTargetProps();
 
     try {
       var doc = new DOMParser().parseFromString(xml);
-      for (let key in reverseTokens){
-        var element = xpath.select(reverseTokens[key], doc)
-        if(element && element.length > 0){
+      for (let key in reverseTokens) {
+        //   var element = xpath.select(reverseTokens[key], doc)
+        let elements: Node[] = xpath_ts.select(reverseTokens[key], doc) as Node[]
+        for (let element of elements) {
           const directReplacement = props[key];
           //check if we have "direct token" in our target.properties file, only then do the replacement
-          if(directReplacement){
+          if (directReplacement) {
             var val = key;
-            if(vscode.workspace.getConfiguration('iiq-dev-accelerator').get('mode') == "devsecops"){
+            if (vscode.workspace.getConfiguration('iiq-dev-accelerator').get('mode') == "devsecops") {
               val = "${" + key + "}"
             }
-            element[0].value = val;
+            // Change Node.ELEMENT_NODE to 1 and Node.TEXT_NODE to 3 to make this work (for now)
+            if(element.nodeType === Node.ELEMENT_NODE && element.firstChild && element.firstChild.nodeType === Node.TEXT_NODE) {
+              element.removeChild(element.firstChild)
+              const textNode = doc.createTextNode(val)
+              element.appendChild(textNode)
+            }
+            else{
+              element.textContent = val
+            } 
           }
         }
       }
