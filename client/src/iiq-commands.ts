@@ -1471,7 +1471,7 @@ export class IIQCommands {
       var doc = new DOMParser().parseFromString(xml);
       for (let key in reverseTokens) {
         //   var element = xpath.select(reverseTokens[key], doc)
-        let elements: Node[] = xpath_ts.select(reverseTokens[key], doc) as Node[]
+        let elements = xpath_ts.select(reverseTokens[key], doc) as Node[]
         for (let element of elements) {
           const directReplacement = props[key];
           //check if we have "direct token" in our target.properties file, only then do the replacement
@@ -1481,8 +1481,11 @@ export class IIQCommands {
               val = "${" + key + "}"
             }
             // Change Node.ELEMENT_NODE to 1 and Node.TEXT_NODE to 3 to make this work (for now)
-            if(element.nodeType === Node.ELEMENT_NODE && element.firstChild && element.firstChild.nodeType === Node.TEXT_NODE) {
-              element.removeChild(element.firstChild)
+            // This will remove ALL child nodes of your target, and then replace with your token. Get your target correct!
+            if(element.nodeType === 1) {
+              while (element.firstChild) {
+                element.removeChild(element.firstChild)
+              }
               const textNode = doc.createTextNode(val)
               element.appendChild(textNode)
             }
